@@ -4,6 +4,8 @@ Tu segundo cerebro para el día a día: pendientes que se borran al cumplirlos, 
 
 - **Captura en 3 segundos**: escribís "pagar la luz mañana 20hs" y la app entiende la fecha, la hora, si es urgente y si se repite.
 - **Atención inmediata**: lo vencido y lo de hoy siempre arriba.
+- **Te llama por tu nombre**: te saluda al abrirla y en los avisos (lo cambiás en Ajustes).
+- **Aviso anticipado**: además del aviso a la hora, uno de 1 a 7 días antes, para tareas y eventos.
 - **Avisos que insisten**: si no marcás la tarea, te vuelve a avisar a los 30 y a los 60 minutos. Todos los días a las 8:00 llega un resumen.
 - **Calendario** con vista de mes y de semana, y el detalle del día elegido.
 - **Papelera de 7 días** y "Deshacer" por si tachás algo por error.
@@ -73,7 +75,7 @@ Abrí http://localhost:8000. Funciona completa, pero guarda los datos solo en es
 
 ## 2 · Crear las tablas
 
-**SQL Editor → New query**: pegá todo `supabase/01_esquema.sql` y apretá **Run**.
+**SQL Editor → New query**: pegá todo `supabase/01_esquema.sql` y apretá **Run**. Después hacé lo mismo con `supabase/03_aviso_anticipado.sql` (agrega el aviso de 1 a 7 días antes).
 
 ## 3 · Inicio de sesión con código (para que funcione bien en el iPhone)
 

@@ -4,7 +4,9 @@
 // =====================================================================
 
 import { el, abrirHoja, cerrarHoja, grupoChips, toast } from './ui.js';
-import { almacen, hayNube, usuarioActual, cerrarSesion } from './datos.js';
+import {
+  almacen, hayNube, usuarioActual, cerrarSesion, nombreUsuario, guardarNombre,
+} from './datos.js';
 import { parsear } from './parser.js';
 import {
   crearDesdeTexto, avisoPara, completar, borrar, posponer, restaurar, enPapelera,
@@ -18,6 +20,16 @@ import {
 } from './notificaciones.js';
 
 const iso = (d) => (d ? new Date(d).toISOString() : null);
+
+// Aviso anticipado: además del aviso a la hora, uno de 1 a 7 días antes
+function selectorAnticipo(valor) {
+  const s = el('select.campo', { 'aria-label': 'Avisarme antes' },
+    el('option', { value: '' }, 'Sin aviso anticipado'),
+    [1, 2, 3, 4, 5, 6, 7].map((n) => el('option', { value: String(n) }, n === 1 ? '1 día antes' : `${n} días antes`)));
+  s.value = valor ? String(valor) : '';
+  s.dias = () => (s.value ? Number(s.value) : null);
+  return s;
+}
 
 // =====================================================================
 // Captura rápida (barra de arriba en PC, hoja en el celular)
@@ -111,6 +123,7 @@ function formTarea(id, diaInicial) {
     el('option', { value: '' }, 'No se repite'),
     Object.entries(NOMBRE_REPETICION).map(([v, t]) => el('option', { value: v }, t)));
   repetir.value = it?.repeticion ?? '';
+  const anticipo = selectorAnticipo(it?.anticipo_dias);
 
   // --- Cuándo -------------------------------------------------------
   const resumen = el('div.cuando-resumen');
@@ -121,6 +134,7 @@ function formTarea(id, diaInicial) {
   const pintarResumen = () => {
     resumen.textContent = st.fecha ? `📅 ${fechaCorta(st.fecha, st.conHora)}` : 'Sin fecha';
     avisar.hidden = !st.fecha;
+    anticipo.hidden = !st.fecha;
     inFecha.value = st.fecha ? aInputFecha(st.fecha) : '';
     inHora.value = st.fecha && st.conHora ? aInputHora(st.fecha) : '';
   };
@@ -159,6 +173,7 @@ function formTarea(id, diaInicial) {
       tipo: 'tarea', titulo: t, nota: nota.value.trim() || null, urgente: urgente.valor(),
       fecha: st.fecha ? iso(st.conHora ? st.fecha : inicioDia(st.fecha)) : null,
       repeticion: repetir.value || null,
+      anticipo_dias: st.fecha ? anticipo.dias() : null,
     };
     if (!it || st.tocado) datos.aviso = st.avisar ? avisoPara(st.fecha, st.conHora) : null;
     if (it) await almacen.actualizar(it.id, datos); else await almacen.guardar(datos);
@@ -170,7 +185,7 @@ function formTarea(id, diaInicial) {
 
   return el('div.form', {},
     titulo,
-    el('div.grupo', {}, el('label.etiqueta', {}, 'Cuándo'), resumen, chips, elegir, avisar),
+    el('div.grupo', {}, el('label.etiqueta', {}, 'Cuándo'), resumen, chips, elegir, avisar, anticipo),
     el('div.fila-doble', {}, urgente, el('div.grupo.sin-margen', {}, repetir)),
     nota,
     it?.aviso && el('p.texto-suave', {}, `Aviso programado: ${fechaCorta(it.aviso)}`),
@@ -228,6 +243,7 @@ function formEvento(id, diaInicial) {
   }
   const aviso = el('select.campo', { 'aria-label': 'Aviso' }, AVISOS_EVENTO.map((o) => el('option', { value: o.valor }, o.texto)));
   aviso.value = avisoSel;
+  const anticipo = selectorAnticipo(it?.anticipo_dias);
 
   // Si el inicio se mueve, el fin lo acompaña
   inIni.addEventListener('change', () => {
@@ -258,7 +274,7 @@ function formEvento(id, diaInicial) {
       const base = todoElDia.valor() ? new Date(new Date(ini).setHours(9, 0, 0, 0)) : ini;
       av = sumarMinutos(base, -Number(aviso.value));
     }
-    const datos = { tipo: 'evento', titulo: t, nota: nota.value.trim() || null, fecha: iso(ini), fin: iso(fin), aviso: iso(av), repeticion: null };
+    const datos = { tipo: 'evento', titulo: t, nota: nota.value.trim() || null, fecha: iso(ini), fin: iso(fin), aviso: iso(av), repeticion: null, anticipo_dias: anticipo.dias() };
     if (it) await almacen.actualizar(it.id, datos); else await almacen.guardar(datos);
     cerrarHoja();
     toast(it ? 'Evento actualizado' : `Evento anotado · ${fechaLarga(ini).toLowerCase()}`, { duracion: 2500 });
@@ -268,7 +284,7 @@ function formEvento(id, diaInicial) {
   return el('div.form', {},
     titulo,
     el('div.grupo', {}, el('label.etiqueta', {}, 'Cuándo'), inFecha, todoElDia, horas),
-    el('div.grupo', {}, el('label.etiqueta', {}, 'Recordatorio'), aviso),
+    el('div.grupo', {}, el('label.etiqueta', {}, 'Recordatorio'), aviso, anticipo),
     nota,
     el('div.botonera', {},
       it && el('button.boton-peligro', { type: 'button', onclick: () => { cerrarHoja(); borrar(it.id); } }, 'Borrar'),
@@ -347,6 +363,36 @@ export function abrirPapelera() {
 }
 
 // =====================================================================
+// Nombre (la primera vez, y desde Ajustes)
+// =====================================================================
+function campoNombre() {
+  return el('input.campo', {
+    type: 'text', value: nombreUsuario(), placeholder: 'Tu nombre', 'aria-label': 'Tu nombre',
+    autocomplete: 'given-name', autocapitalize: 'words', maxlength: '40', enterkeyhint: 'done',
+  });
+}
+
+export function pedirNombre() {
+  const input = campoNombre();
+  const guardar = async () => {
+    const n = input.value.trim();
+    if (!n) { input.focus(); input.classList.add('error'); return; }
+    await guardarNombre(n);
+    cerrarHoja();
+    toast(`¡Hola, ${n}! Ya estamos al día`, { duracion: 3500 });
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); guardar(); } });
+  abrirHoja(el('div.form', {},
+    el('p.texto-suave', {}, 'Así te saludo y te nombro en los avisos.'),
+    input,
+    el('div.botonera', {},
+      el('button.boton-suave', { type: 'button', onclick: cerrarHoja }, 'Ahora no'),
+      el('button.boton-primario', { type: 'button', onclick: guardar }, 'Guardar')),
+  ), { titulo: '¿Cómo te llamo?' });
+  setTimeout(() => input.focus(), 250);
+}
+
+// =====================================================================
 // Ajustes
 // =====================================================================
 export async function abrirAjustes() {
@@ -376,8 +422,16 @@ export async function abrirAjustes() {
 
   const usuario = await usuarioActual();
   const sonido = interruptor('Sonido al vencer algo (con la app abierta)', leerPref('sonido', true), (v) => guardarPref('sonido', v));
+  const nombre = campoNombre();
+  nombre.addEventListener('change', async () => {
+    const n = nombre.value.trim();
+    if (!n || n === nombreUsuario()) { nombre.value = nombreUsuario(); return; }
+    await guardarNombre(n);
+    toast(`Listo, ${n}`, { duracion: 2000 });
+  });
 
   abrirHoja(el('div.form', {},
+    el('div.grupo', {}, el('label.etiqueta', {}, '¿Cómo te llamo?'), nombre),
     el('div.grupo', {}, el('label.etiqueta', {}, 'Avisos'), estadoNotif, botonNotif, sonido),
     esIOS() && !esInstalada() && el('div.caja-ios', {},
       el('strong', {}, 'Instalala en tu iPhone'),
@@ -394,7 +448,7 @@ export async function abrirAjustes() {
         : el('p.texto-suave', {}, 'Modo local: lo que anotás se guarda solo en este dispositivo. Configurá Supabase (ver README) para sincronizar PC y celular.')),
     el('div.grupo', {}, el('label.etiqueta', {}, 'Atajos en la PC'),
       el('p.texto-suave', {}, 'N o / anotar · 1 Pendientes · 2 Calendario · Esc cerrar')),
-    el('p.texto-suave.version', {}, 'Al día · v1'),
+    el('p.texto-suave.version', {}, 'Al día · v2'),
   ), { titulo: 'Ajustes' });
 }
 

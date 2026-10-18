@@ -6,6 +6,7 @@ import { el } from './ui.js';
 import { secciones, completar, vencida, momento, enPapelera } from './acciones.js';
 import { fechaCorta, hora, tieneHora, NOMBRE_REPETICION } from './fechas.js';
 import { editarTarea, editarEvento, abrirPapelera } from './formularios.js';
+import { nombreUsuario } from './datos.js';
 
 export function renderPendientes(cont) {
   const ahora = new Date();
@@ -30,7 +31,7 @@ export function renderPendientes(cont) {
   if (vacio) {
     cont.append(el('div.vacio', {},
       el('div.vacio-icono', { 'aria-hidden': 'true' }, '✓'),
-      el('p.vacio-titulo', {}, 'Todo al día'),
+      el('p.vacio-titulo', {}, nombreUsuario() ? `Todo al día, ${nombreUsuario()}` : 'Todo al día'),
       el('p.vacio-texto', {}, 'Cuando te acuerdes de algo, anotalo. Probá: "pagar la luz mañana 20hs".'),
     ));
   }
@@ -67,6 +68,8 @@ export function filaTarea(t, ahora = new Date()) {
       el('span.icono', { 'aria-hidden': 'true' }, t.aviso ? '🔔' : '📅'),
       `${venc ? 'Vencida · ' : ''}${fechaCorta(m, conH, ahora)}`));
   }
+  if (t.anticipo_dias && m) meta.push(el('span.dato', { title: 'Aviso anticipado' }, el('span.icono', { 'aria-hidden': 'true' }, '⏳'),
+    t.anticipo_dias === 1 ? '1 día antes' : `${t.anticipo_dias} días antes`));
   if (t.repeticion) meta.push(el('span.dato', {}, el('span.icono', { 'aria-hidden': 'true' }, '↻'), NOMBRE_REPETICION[t.repeticion]));
   if (t.nota) meta.push(el('span.dato.nota-indicador', { title: t.nota }, '✎ Nota'));
 

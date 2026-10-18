@@ -28,7 +28,7 @@ const leer = (k, def) => { try { return JSON.parse(localStorage.getItem(k)) ?? d
 const escribir = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin espacio */ } };
 
 const CAMPOS = ['id', 'tipo', 'titulo', 'nota', 'urgente', 'fecha', 'fin', 'aviso', 'repeticion',
-  'completada_en', 'borrada_en', 'creado_en', 'actualizado_en'];
+  'anticipo_dias', 'completada_en', 'borrada_en', 'creado_en', 'actualizado_en'];
 const limpiar = (it) => Object.fromEntries(CAMPOS.filter((c) => c in it).map((c) => [c, it[c]]));
 
 class Almacen {
@@ -177,4 +177,32 @@ export async function cerrarSesion() {
   const cli = await clienteSupabase();
   await cli?.auth.signOut();
   almacen.desconectar();
+  escribir(CLAVE_NOMBRE, '');
+}
+
+// ---------------------------------------------------------------------
+// Nombre del usuario (para saludarlo). Se guarda en la cuenta, así lo
+// ven todos los dispositivos y también las notificaciones.
+// ---------------------------------------------------------------------
+const CLAVE_NOMBRE = 'aldia.nombre';
+
+export const nombreUsuario = () => leer(CLAVE_NOMBRE, '');
+
+/** Al iniciar: trae el nombre guardado en la cuenta (si hay) */
+export function sincronizarNombre(usuario) {
+  const n = usuario?.user_metadata?.nombre;
+  if (n) escribir(CLAVE_NOMBRE, n);
+  return nombreUsuario();
+}
+
+export async function guardarNombre(nombre) {
+  const n = nombre.trim().slice(0, 40);
+  escribir(CLAVE_NOMBRE, n);
+  almacen.emitir();
+  const cli = await clienteSupabase();
+  if (cli && almacen.usuario) {
+    const { error } = await cli.auth.updateUser({ data: { nombre: n } });
+    if (error) console.warn('No se pudo guardar el nombre en la cuenta', error.message);
+  }
+  return n;
 }

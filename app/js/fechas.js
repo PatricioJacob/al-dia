@@ -85,6 +85,14 @@ export function siguienteRepeticion(d, rep, ahora = new Date()) {
   return x;
 }
 
+/** "Buen día" / "Buenas tardes" / "Buenas noches" según la hora */
+export function saludoSegunHora(d = new Date()) {
+  const h = d.getHours();
+  if (h >= 5 && h < 13) return 'Buen día';
+  if (h >= 13 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
 export const NOMBRE_REPETICION = {
   diaria: 'Todos los días',
   semanal: 'Todas las semanas',

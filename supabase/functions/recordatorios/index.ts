@@ -35,8 +35,19 @@ type Suscripcion = {
 type Item = {
   id: string; user_id: string; tipo: "tarea" | "evento"; titulo: string; urgente: boolean;
   fecha: string | null; fin: string | null; aviso: string | null; envios: number;
+  anticipo_dias: number | null;
   completada_en: string | null; borrada_en: string | null;
 };
+
+// Nombre que el usuario eligió en la app (se guarda en su cuenta)
+const nombres = new Map<string, string>();
+async function nombreDe(userId: string) {
+  if (!nombres.has(userId)) {
+    const { data } = await db.auth.admin.getUserById(userId);
+    nombres.set(userId, String(data?.user?.user_metadata?.nombre ?? "").trim());
+  }
+  return nombres.get(userId)!;
+}
 
 // ---------------------------------------------------------------------
 // Envío de un push a todos los dispositivos de un usuario
@@ -75,6 +86,14 @@ async function enviarAUsuario(subs: Suscripcion[], datos: Record<string, unknown
 function hora(iso: string, zona: string) {
   return new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: zona })
     .format(new Date(iso));
+}
+
+/** "viernes 24 de octubre" (+ " a las 15:00" si tiene hora) */
+function diaYHora(iso: string, zona: string) {
+  const d = new Date(iso);
+  const dia = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long", timeZone: zona }).format(d);
+  const h = hora(iso, zona);
+  return h === "00:00" ? dia : `${dia} a las ${h}`;
 }
 
 async function suscripcionesPorUsuario(userIds: string[]) {
@@ -118,8 +137,11 @@ async function procesarAvisos() {
       titulo = `📅 ${it.titulo}`;
       cuerpo = it.fecha ? `Empieza a las ${hora(it.fecha, zona)}` : "Evento";
     } else {
+      const nombre = await nombreDe(it.user_id);
       titulo = `${it.urgente ? "🔥" : "🔔"} ${it.titulo}`;
-      cuerpo = insistencia ? "Sigue pendiente · tocá para marcarla o posponerla" : "Tocá para marcarla o posponerla";
+      cuerpo = insistencia
+        ? `${nombre ? nombre + ", sigue" : "Sigue"} pendiente · tocá para marcarla o posponerla`
+        : "Tocá para marcarla o posponerla";
     }
 
     if (misSubs.length) {
@@ -134,6 +156,45 @@ async function procesarAvisos() {
     await db.from("items").update({ envios, proximo_envio: siguiente }).eq("id", it.id);
   }
   return { avisos: total };
+}
+
+// ---------------------------------------------------------------------
+// Avisos anticipados: 1 a 7 días antes (corre junto con los avisos)
+// ---------------------------------------------------------------------
+async function procesarAnticipos() {
+  const { data, error } = await db.from("items")
+    .select("*")
+    .lte("proximo_anticipo", new Date().toISOString())
+    .is("completada_en", null)
+    .is("borrada_en", null)
+    .limit(200);
+  if (error) throw error;
+  const items = data as Item[];
+  if (items.length === 0) return { anticipos: 0 };
+
+  const subs = await suscripcionesPorUsuario([...new Set(items.map((i) => i.user_id))]);
+  let total = 0;
+
+  for (const it of items) {
+    const misSubs = subs.get(it.user_id) ?? [];
+    const zona = misSubs[0]?.zona ?? ZONA_DEFECTO;
+    const nombre = await nombreDe(it.user_id);
+    const n = it.anticipo_dias ?? 1;
+    const cuando = n === 1 ? "Mañana" : `En ${n} días`;
+    const ref = it.tipo === "evento" ? it.fecha : (it.fecha ?? it.aviso);
+
+    if (misSubs.length && ref) {
+      total += await enviarAUsuario(misSubs, {
+        titulo: `⏳ ${cuando}: ${it.titulo}`,
+        cuerpo: `${nombre ? nombre + ", te" : "Te"} aviso con tiempo · ${diaYHora(ref, zona)}`,
+        item: it.id,
+        tag: `anticipo-${it.id}`,
+      });
+    }
+    // Se manda una sola vez (el trigger lo reprograma si cambia la fecha)
+    await db.from("items").update({ proximo_anticipo: null }).eq("id", it.id);
+  }
+  return { anticipos: total };
 }
 
 // ---------------------------------------------------------------------
@@ -182,8 +243,9 @@ async function procesarResumen() {
       ? `Primero: ${eventos[0].titulo} a las ${hora(eventos[0].fecha!, zona)}`
       : `Empezá por: ${tareas![0].titulo}`;
 
+    const nombre = await nombreDe(userId);
     enviados += await enviarAUsuario(subs, {
-      titulo: `☀️ Hoy: ${partes.join(" y ")}`,
+      titulo: `☀️ ${nombre ? `Buen día, ${nombre}` : "Buen día"} · hoy: ${partes.join(" y ")}`,
       cuerpo: primero,
       tag: "resumen-diario",
     });
@@ -197,8 +259,11 @@ Deno.serve(async (req) => {
     return new Response("No autorizado", { status: 401 });
   }
   try {
+    nombres.clear(); // por si alguien cambió su nombre desde la última vez
     const { accion } = await req.json().catch(() => ({ accion: "avisos" }));
-    const resultado = accion === "resumen" ? await procesarResumen() : await procesarAvisos();
+    const resultado = accion === "resumen"
+      ? await procesarResumen()
+      : { ...(await procesarAvisos()), ...(await procesarAnticipos()) };
     return Response.json({ ok: true, ...resultado });
   } catch (e) {
     console.error(e);

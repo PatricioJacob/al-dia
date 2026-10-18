@@ -2,16 +2,18 @@
 // Al día · arranque y orquestación
 // =====================================================================
 
-import { almacen, hayNube, usuarioActual, enviarCodigo, verificarCodigo } from './datos.js';
+import {
+  almacen, hayNube, usuarioActual, enviarCodigo, verificarCodigo, nombreUsuario, sincronizarNombre,
+} from './datos.js';
 import { renderPendientes } from './vista-pendientes.js';
 import { renderCalendario } from './vista-calendario.js';
 import {
-  crearCaptura, abrirCapturaMovil, abrirAjustes, abrirPosponer, leerPref,
+  crearCaptura, abrirCapturaMovil, abrirAjustes, abrirPosponer, leerPref, pedirNombre,
 } from './formularios.js';
 import { cerrarHoja, hayHojaAbierta, toast, el } from './ui.js';
 import { activas } from './acciones.js';
 import { renovarSiCorresponde, sonar, notificarLocal, permiso } from './notificaciones.js';
-import { fechaLarga, hora } from './fechas.js';
+import { fechaLarga, hora, saludoSegunHora } from './fechas.js';
 
 const $ = (s) => document.querySelector(s);
 let vista = (() => { try { return localStorage.getItem('aldia.vista') || 'pendientes'; } catch { return 'pendientes'; } })();
@@ -37,6 +39,9 @@ function irA(v) {
 
 function pintar() {
   $('#fecha-hoy').textContent = fechaLarga(new Date());
+  const nombre = nombreUsuario();
+  $('#saludo').textContent = nombre ? `${saludoSegunHora()}, ${nombre}` : '';
+  $('#saludo').hidden = !nombre;
   if (vista === 'pendientes') renderPendientes($('#vista-pendientes'));
   else renderCalendario($('#vista-calendario'));
   // Contador en la navegación
@@ -171,14 +176,17 @@ async function iniciar() {
   if (hayNube()) {
     let usuario = await usuarioActual();
     if (!usuario) usuario = await mostrarLogin();
+    sincronizarNombre(usuario);
     await almacen.conectar(usuario);
     renovarSiCorresponde();
-    if (permiso() === 'default') {
-      toast('Activá los avisos para que no se te pase nada', { accion: 'Activar', alAccion: abrirAjustes, duracion: 8000 });
+    if (!nombreUsuario()) pedirNombre();
+    else if (permiso() === 'default') {
+      toast(`${nombreUsuario()}, activá los avisos para que no se te pase nada`, { accion: 'Activar', alAccion: abrirAjustes, duracion: 8000 });
     }
   } else {
     $('#aviso-local').hidden = false;
     purgarLocal();
+    if (!nombreUsuario()) pedirNombre();
   }
 
   // Si se abrió tocando una notificación
