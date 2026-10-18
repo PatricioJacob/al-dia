@@ -1,0 +1,6 @@
+# Claves privadas: NUNCA subir a GitHub
+secretos/
+__pycache__/
+.DS_Store
+Thumbs.db
+supabase/.temp/
