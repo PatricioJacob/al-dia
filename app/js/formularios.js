@@ -3,7 +3,7 @@
 // papelera y ajustes
 // =====================================================================
 
-import { el, abrirHoja, cerrarHoja, grupoChips, toast } from './ui.js';
+import { el, abrirHoja, cerrarHoja, grupoChips, toast, aplicarTema, temaGuardado } from './ui.js';
 import {
   almacen, hayNube, usuarioActual, cerrarSesion, nombreUsuario, guardarNombre,
 } from './datos.js';
@@ -432,6 +432,13 @@ export async function abrirAjustes() {
 
   abrirHoja(el('div.form', {},
     el('div.grupo', {}, el('label.etiqueta', {}, '¿Cómo te llamo?'), nombre),
+    el('div.grupo', {}, el('label.etiqueta', {}, 'Apariencia'),
+      grupoChips([
+        { valor: 'oscuro', texto: '🌙 Oscuro' },
+        { valor: 'claro', texto: '☀️ Claro' },
+        { valor: 'auto', texto: 'Automático' },
+      ], temaGuardado(), aplicarTema),
+      el('p.texto-suave', {}, 'Automático sigue el modo del celular o la PC.')),
     el('div.grupo', {}, el('label.etiqueta', {}, 'Avisos'), estadoNotif, botonNotif, sonido),
     esIOS() && !esInstalada() && el('div.caja-ios', {},
       el('strong', {}, 'Instalala en tu iPhone'),
@@ -448,7 +455,7 @@ export async function abrirAjustes() {
         : el('p.texto-suave', {}, 'Modo local: lo que anotás se guarda solo en este dispositivo. Configurá Supabase (ver README) para sincronizar PC y celular.')),
     el('div.grupo', {}, el('label.etiqueta', {}, 'Atajos en la PC'),
       el('p.texto-suave', {}, 'N o / anotar · 1 Pendientes · 2 Calendario · Esc cerrar')),
-    el('p.texto-suave.version', {}, 'Al día · v2'),
+    el('p.texto-suave.version', {}, 'Al día · v3'),
   ), { titulo: 'Ajustes' });
 }
 

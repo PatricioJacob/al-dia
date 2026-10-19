@@ -6,7 +6,7 @@
   <title>Al día</title>
   <meta name="description" content="Tus pendientes, recordatorios y eventos en un solo lugar.">
   <meta name="theme-color" content="#0d0d12">
-  <meta name="color-scheme" content="dark">
+  <meta name="color-scheme" content="dark light">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="iconos/icono-192.png" type="image/png">
   <!-- iPhone: que se vea como app instalada -->
@@ -15,6 +15,19 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Al día">
+  <script>
+    // Aplicar el tema elegido antes de pintar (evita un destello del otro color)
+    (function () {
+      var t = 'oscuro';
+      try { t = JSON.parse(localStorage.getItem('aldia.pref.tema')) || 'oscuro'; } catch (e) {}
+      document.documentElement.setAttribute('data-tema', t);
+      var claro = t === 'claro' || (t === 'auto' && matchMedia('(prefers-color-scheme: light)').matches);
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', claro ? '#f6f5f2' : '#0d0d12');
+      // iPhone: texto oscuro en la barra de estado si el tema es claro
+      var ios = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+      if (ios) ios.setAttribute('content', claro ? 'default' : 'black-translucent');
+    })();
+  </script>
   <link rel="stylesheet" href="css/estilos.css">
   <script type="module" src="js/app.js"></script>
 </head>

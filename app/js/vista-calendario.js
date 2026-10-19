@@ -109,10 +109,12 @@ function grillaMes(hoy) {
 
     grilla.append(el(`button.${clases}`, {
       type: 'button', role: 'gridcell',
-      'aria-label': `${fechaLarga(d)}${items.length ? `, ${items.length} cosas` : ''}`,
+      'aria-label': `${mismoDia(d, hoy) ? 'Hoy, ' : ''}${fechaLarga(d)}${items.length ? `, ${items.length} cosas` : ''}`,
+      'aria-current': mismoDia(d, hoy) ? 'date' : null,
       onclick: () => elegirDia(d),
     },
     el('span.cal-num', {}, d.getDate()),
+    mismoDia(d, hoy) && el('span.cal-hoy-tag', {}, 'Hoy'),
     // Celular: puntitos de color
     items.length > 0 && el('span.puntos', { 'aria-hidden': 'true' },
       items.slice(0, 3).map((it) => el(`span.punto.${claseItem(it)}`))),
@@ -134,7 +136,7 @@ function grillaSemana(hoy) {
     const items = delDia(d);
     cols.append(el(`div.cal-col${mismoDia(d, hoy) ? '.hoy' : ''}${mismoDia(d, estado.elegido) ? '.elegido' : ''}`, {},
       el('button.cal-col-cabecera', { type: 'button', onclick: () => elegirDia(d) },
-        el('span.cal-col-dia', {}, DIAS_CORTOS[d.getDay()]),
+        el('span.cal-col-dia', {}, mismoDia(d, hoy) ? 'hoy' : DIAS_CORTOS[d.getDay()]),
         el('span.cal-col-num', {}, d.getDate()),
       ),
       el('div.cal-col-items', {},

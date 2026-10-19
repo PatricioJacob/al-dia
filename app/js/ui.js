@@ -98,3 +98,24 @@ export function grupoChips(opciones, valor, alElegir) {
 }
 
 export const vibrar = (ms = 10) => { try { navigator.vibrate?.(ms); } catch { /* iOS no vibra */ } };
+
+// ---------------------------------------------------------------------
+// Tema: 'oscuro' | 'claro' | 'auto' (sigue al sistema)
+// El <head> de index.html lo aplica antes de pintar para que no parpadee.
+// ---------------------------------------------------------------------
+export function temaGuardado() {
+  try { return JSON.parse(localStorage.getItem('aldia.pref.tema')) || 'oscuro'; } catch { return 'oscuro'; }
+}
+
+export function aplicarTema(tema = temaGuardado()) {
+  document.documentElement.dataset.tema = tema;
+  try { localStorage.setItem('aldia.pref.tema', JSON.stringify(tema)); } catch { /* nada */ }
+  // Color de la barra de estado del navegador / celular
+  const fondo = getComputedStyle(document.documentElement).getPropertyValue('--fondo').trim();
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', fondo || '#0d0d12');
+}
+
+// Si está en "Automático" y el sistema cambia de modo, actualizar la barra
+matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => {
+  if (temaGuardado() === 'auto') aplicarTema('auto');
+});
