@@ -5,7 +5,7 @@
 // Cambiá VERSION cada vez que publiques cambios.
 // =====================================================================
 
-const VERSION = 'al-dia-v3';
+const VERSION = 'al-dia-v4';
 const ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilos.css',
   'js/app.js', 'js/config.js', 'js/datos.js', 'js/fechas.js', 'js/parser.js',

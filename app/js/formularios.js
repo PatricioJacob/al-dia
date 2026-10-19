@@ -455,7 +455,7 @@ export async function abrirAjustes() {
         : el('p.texto-suave', {}, 'Modo local: lo que anotás se guarda solo en este dispositivo. Configurá Supabase (ver README) para sincronizar PC y celular.')),
     el('div.grupo', {}, el('label.etiqueta', {}, 'Atajos en la PC'),
       el('p.texto-suave', {}, 'N o / anotar · 1 Pendientes · 2 Calendario · Esc cerrar')),
-    el('p.texto-suave.version', {}, 'Al día · v3'),
+    el('p.texto-suave.version', {}, 'Al día · v4'),
   ), { titulo: 'Ajustes' });
 }
 

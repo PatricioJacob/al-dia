@@ -234,6 +234,13 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 textarea.campo { resize: vertical; min-height: 64px; }
 select.campo { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--texto-2) 50%), linear-gradient(135deg, var(--texto-2) 50%, transparent 50%); background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 36px; }
 input[type="date"].campo, input[type="time"].campo { color-scheme: dark; }
+/* Tema claro: ícono del calendario/reloj y selector nativo en claro */
+:root[data-tema="claro"] input[type="date"].campo,
+:root[data-tema="claro"] input[type="time"].campo { color-scheme: light; }
+@media (prefers-color-scheme: light) {
+  :root[data-tema="auto"] input[type="date"].campo,
+  :root[data-tema="auto"] input[type="time"].campo { color-scheme: light; }
+}
 
 .segmentado { display: inline-flex; background: var(--fondo); border: 1px solid var(--borde); border-radius: 11px; padding: 3px; gap: 2px; }
 .segmentado button { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 650; color: var(--texto-2); min-height: 32px; transition: background 0.15s, color 0.15s; }
